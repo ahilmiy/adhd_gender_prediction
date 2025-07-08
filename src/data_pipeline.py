@@ -25,21 +25,28 @@ def load_data():
 from sklearn.impute import SimpleImputer
 
 def prepare_dataset(connectome_df, categorical_df, labels_df):
-    labels_df.columns = labels_df.columns.str.lower()
+    # X: sadece connectome verisi
+    X = connectome_df.drop(columns=["participant_id"])
 
-    df = connectome_df.merge(categorical_df, on="participant_id", how="left")
-    df = df.merge(labels_df, on="participant_id", how="left")
+    # y: sadece etiketler
+    y = labels_df.copy()
 
-    # Hedef değişkenler
-    y = df[["adhd_outcome", "sex_f"]].astype(int)
+    # Kolonları normalize et
+    y.columns = [col.strip().upper().replace(" ", "_") for col in y.columns]
 
-    # Özellikler
-    drop_cols = ["participant_id", "adhd_outcome", "sex_f"]
-    X = df.drop(columns=drop_cols)
+    # Örneğin:
+    # participant_id | ADHD_Outcome | Sex_F gibi hale getir
+    if "SEX_F" not in y.columns:
+        if "SEX" in y.columns:
+            y["SEX_F"] = y["SEX"].map({"F": 1, "M": 0})
 
-    # Eksik değerleri doldur (mean imputation)
-    imputer = SimpleImputer(strategy="mean")
-    X_imputed = imputer.fit_transform(X)
+    return X, y[["ADHD_OUTCOME", "SEX_F"]]
+def load_test_data():
+    test_connectome = pd.read_csv("D:/Dosyalar/adhd_gender_prediction/data/raw/test/test_functional_connectome_matrices.csv", index_col=0)
+    test_categorical = pd.read_excel("D:/Dosyalar/adhd_gender_prediction/data/raw/test/test_categorical.xlsx")
 
-    return X_imputed, y
+    # Gerekirse ID'leri aynı formatta ayarla
+    test_connectome.index.name = "participant_id"
+    return test_connectome, test_categorical
+
 
